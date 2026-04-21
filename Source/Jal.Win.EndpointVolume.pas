@@ -3,50 +3,48 @@ unit Jal.Win.EndpointVolume;
 interface
 
 uses
-  Winapi.Windows, Winapi.ActiveX, Winapi.PropSys;
+  Winapi.Windows;
 
 const
   IID_IAudioEndpointVolume: TGUID = '{5CDF2C82-841E-4546-9722-0CF74078229A}';
 
 type
-  AUDIO_VOLUME_NOTIFICATION_DATA = record
-    guidEventContext: TGUID;
-    bMuted: BOOL;
-    fMasterVolume: Single;
-    nChannels: DWORD;
-    afChannelVolumes: Single;
+  TAudioVolumeNotificationData = record
+    EventContext: TGUID;
+    Muted: BOOL;
+    MasterVolume: Single;
+    Channels: DWORD;
+    ChannelVolumes: Single;
   end;
-
-  PAUDIO_VOLUME_NOTIFICATION_DATA = ^AUDIO_VOLUME_NOTIFICATION_DATA;
 
   IAudioEndpointVolumeCallback = interface(IUnknown)
     ['{657804FA-D6AD-4496-8A60-352752AF4F89}']
-    function OnNotify(pNotify: AUDIO_VOLUME_NOTIFICATION_DATA): HRESULT; stdcall;
+    function OnNotify(Notify: TAudioVolumeNotificationData): HRESULT; stdcall;
   end;
 
   IAudioEndpointVolume = interface(IUnknown)
     ['{5CDF2C82-841E-4546-9722-0CF74078229A}']
-    function RegisterControlChangeNotify(pNotify: IAudioEndpointVolumeCallback): HRESULT; stdcall;
-    function UnregisterControlChangeNotify(pNotify: IAudioEndpointVolumeCallback): HRESULT; stdcall;
-    function GetChannelCount(pnChannelCount: PDWORD): HRESULT; stdcall;
-    function SetMasterVolumeLevel(fLevelDB: Single; pguidEventContext: PGUID): HRESULT; stdcall;
-    function SetMasterVolumeLevelScalar(fLevelDB: Single; pguidEventContext: PGUID): HRESULT; stdcall;
-    function GetMasterVolumeLevel(out fLevelDB: Single): HRESULT; stdcall;
-    function GetMasterVolumeLevelScalar(pfLevel: PSingle): HRESULT; stdcall;
-    function SetChannelVolumeLevel(nChannel: DWORD; fLevelDB: Single; pguidEventContext: PGUID): HRESULT; stdcall;
-    function SetChannelVolumeLevelScalar(nChannel: DWORD; fLevel: Single; pguidEventContext: PGUID): HRESULT; stdcall;
-    function GetChannelVolumeLevel(nChannel: Integer; pfLevelDB: PSingle): HRESULT; stdcall;
-    function GetChannelVolumeLevelScalar(nChannel: DWORD; pfLevel: PSingle): HRESULT; stdcall;
-    function SetMute(bMute: BOOL; pguidEventContext: PGUID): HRESULT; stdcall;
-    function GetMute(bMute: PBOOL): HRESULT; stdcall;
-    function GetVolumeStepInfo(pnStep: PDWORD; pnStepCount: PDWORD): HRESULT; stdcall;
-    function VolumeStepUp(pguidEventContext: PGUID): HRESULT; stdcall;
-    function VolumeStepDown(pguidEventContext: PGUID): HRESULT; stdcall;
-    function QueryHardwareSupport(pdwHardwareSupportMask: PDWORD): HRESULT; stdcall;
-    function GetVolumeRange(pflVolumeMindB: PSingle; pflVolumeMaxdB: PSingle; pflVolumeIncrementdB: PSingle)
-      : HRESULT; stdcall;
+    function RegisterControlChangeNotify(Notify: IAudioEndpointVolumeCallback): HRESULT; stdcall;
+    function UnregisterControlChangeNotify(Notify: IAudioEndpointVolumeCallback): HRESULT; stdcall;
+    function GetChannelCount(ChannelCount: PDWORD): HRESULT; stdcall;
+    function SetMasterVolumeLevel(LevelDB: Single; EventContext: PGUID): HRESULT; stdcall;
+    function SetMasterVolumeLevelScalar(LevelDB: Single; EventContext: PGUID): HRESULT; stdcall;
+    function GetMasterVolumeLevel(out LevelDB: Single): HRESULT; stdcall;
+    function GetMasterVolumeLevelScalar(Level: PSingle): HRESULT; stdcall;
+    function SetChannelVolumeLevel(Channel: DWORD; LevelDB: Single; EventContext: PGUID): HRESULT; stdcall;
+    function SetChannelVolumeLevelScalar(Channel: DWORD; Level: Single; EventContext: PGUID): HRESULT; stdcall;
+    function GetChannelVolumeLevel(Channel: Integer; LevelDB: PSingle): HRESULT; stdcall;
+    function GetChannelVolumeLevelScalar(Channel: DWORD; Level: PSingle): HRESULT; stdcall;
+    function SetMute(Mute: BOOL; EventContext: PGUID): HRESULT; stdcall;
+    function GetMute(Mute: PBOOL): HRESULT; stdcall;
+    function GetVolumeStepInfo(Step: PDWORD; StepCount: PDWORD): HRESULT; stdcall;
+    function VolumeStepUp(EventContext: PGUID): HRESULT; stdcall;
+    function VolumeStepDown(EventContext: PGUID): HRESULT; stdcall;
+    function QueryHardwareSupport(HardwareSupportMask: PDWORD): HRESULT; stdcall;
+    function GetVolumeRange(VolumeMindB: PSingle; VolumeMaxdB: PSingle; VolumeIncrementdB: PSingle): HRESULT; stdcall;
   end;
 
 implementation
 
 end.
+

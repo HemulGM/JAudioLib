@@ -3,137 +3,132 @@ unit JalWaveReader;
 interface
 
 uses
-  System.Classes, System.SysUtils, System.Types, Winapi.MMSystem, Jal.Win.AudioClient;
+  System.Classes, System.SysUtils, System.Types, Winapi.MMSystem,
+  Jal.Win.AudioClient;
 
 type
   TJalWaveReader = class
   private
-    f_Available: Boolean;
-    f_FileStream: TFileStream;
-    f_BinaryReader: TBinaryReader;
-    f_FormatExtensible: tWAVEFORMATEXTENSIBLE;
+    FAvailable: Boolean;
+    FFileStream: TFileStream;
+    FBinaryReader: TBinaryReader;
+    FFormatExtensible: TWaveFormatExtensible;
   public
-    constructor Create(const a_DirFileName: string);
+    constructor Create(const DirFileName: string);
     destructor Destroy; override;
 
-    property Available: Boolean read f_Available;
-    property FormatExtensible: tWAVEFORMATEXTENSIBLE read f_FormatExtensible;
+    property Available: Boolean read FAvailable;
+    property FormatExtensible: TWaveFormatExtensible read FFormatExtensible;
 
-    function ReadBuffer(const a_pDest: PByte; const a_Count: Cardinal): Cardinal;
+    function ReadBuffer(const Dest: PByte; const Count: Cardinal): Cardinal;
   end;
 
 implementation
 
 { TWaveReader }
 
-constructor TJalWaveReader.Create(const a_DirFileName: string);
+constructor TJalWaveReader.Create(const DirFileName: string);
 var
-  l_RIFF: TArray<Char>;
-  l_RIFFStr: string;
-  l_ChunkSize: Cardinal;
-  l_Format: TArray<Char>;
-  l_FormatStr: string;
-  l_FmtIdent: TArray<Char>;
-  l_FmtIdentStr: string;
-  l_FmtSize: Cardinal;
-  l_DataIdent: TArray<Char>;
-  l_DataIdentStr: string;
-  l_DataSize: Cardinal;
+  LRIFF: TArray<Char>;
+  LRIFFStr: string;
+  //LChunkSize: Cardinal;
+  LFormat: TArray<Char>;
+  LFormatStr: string;
+  LFmtIdent: TArray<Char>;
+  LFmtIdentStr: string;
+  LFmtSize: Cardinal;
+  LDataIdent: TArray<Char>;
+  LDataIdentStr: string;
+  LDataSize: Cardinal;
 begin
-  f_Available := False;
+  FAvailable := False;
 
   // Create Streams
-  f_FileStream := TFileStream.Create(a_DirFileName, fmOpenRead);
-  f_BinaryReader := TBinaryReader.Create(f_FileStream, TEncoding.ASCII);
+  FFileStream := TFileStream.Create(DirFileName, fmOpenRead or fmShareDenyWrite);
+  FBinaryReader := TBinaryReader.Create(FFileStream, TEncoding.ASCII);
 
-  try
-    // Read Headers...
-    l_RIFF := f_BinaryReader.ReadChars(4);
-    l_ChunkSize := f_BinaryReader.ReadCardinal;
-    l_Format := f_BinaryReader.ReadChars(4);
+  // Read Headers...
+  LRIFF := FBinaryReader.ReadChars(4);
+  //LChunkSize :=
+  FBinaryReader.ReadCardinal;
+  LFormat := FBinaryReader.ReadChars(4);
 
-    SetString(l_RIFFStr, PChar(l_RIFF), Length(l_RIFF));
-    SetString(l_FormatStr, PChar(l_Format), Length(l_Format));
+  SetString(LRIFFStr, PChar(LRIFF), Length(LRIFF));
+  SetString(LFormatStr, PChar(LFormat), Length(LFormat));
 
-    // Check Headers
-    if (l_RIFFStr = 'RIFF') and (l_FormatStr = 'WAVE') then
+  // Check Headers
+  if (LRIFFStr = 'RIFF') and (LFormatStr = 'WAVE') then
+  begin
+    // Read fmt chunks...
+    LFmtIdent := FBinaryReader.ReadChars(4);
+    LFmtSize := FBinaryReader.ReadCardinal;
+
+    SetString(LFmtIdentStr, PChar(LFmtIdent), Length(LFmtIdent));
+
+    if (LFmtIdentStr = 'fmt ') and (LFmtSize >= 16) then
     begin
-      // Read fmt chunks...
-      l_FmtIdent := f_BinaryReader.ReadChars(4);
-      l_FmtSize := f_BinaryReader.ReadCardinal;
-
-      SetString(l_FmtIdentStr, PChar(l_FmtIdent), Length(l_FmtIdent));
-
-      if (l_FmtIdentStr = 'fmt ') and (l_FmtSize >= 16) then
-      begin
-        f_FormatExtensible.Format.wFormatTag := f_BinaryReader.ReadWord;
-        f_FormatExtensible.Format.nChannels := f_BinaryReader.ReadWord;
-        f_FormatExtensible.Format.nSamplesPerSec := f_BinaryReader.ReadCardinal;
-        f_FormatExtensible.Format.nAvgBytesPerSec := f_BinaryReader.ReadCardinal;
-        f_FormatExtensible.Format.nBlockAlign := f_BinaryReader.ReadWord;
-        f_FormatExtensible.Format.wBitsPerSample := f_BinaryReader.ReadWord;
-      end;
-
-      // PCM
-      if f_FormatExtensible.Format.wFormatTag = WAVE_FORMAT_PCM then
-      begin
-        // Without extension block
-        if l_FmtSize = 16 then
-        begin
-          f_FormatExtensible.Format.cbSize := 0;
-
-          // Read Data chunk
-          l_DataIdent := f_BinaryReader.ReadChars(4);
-
-          SetString(l_DataIdentStr, PChar(l_DataIdent), Length(l_DataIdent));
-
-          if l_DataIdentStr = 'data' then
-          begin
-            l_DataSize := f_BinaryReader.ReadCardinal;
-
-            if l_DataSize > 0 then
-            begin
-              f_Available := True;
-            end;
-          end;
-        end;
-      end
-      // Extensible
-      else if f_FormatExtensible.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE then
-      begin
-        // Read extension block
-        f_FormatExtensible.Format.cbSize := f_BinaryReader.ReadWord;
-        f_FormatExtensible.wValidBitsPerSample := f_BinaryReader.ReadWord;
-        f_FormatExtensible.dwChannelMask := f_BinaryReader.ReadCardinal;
-        f_FormatExtensible.SubFormat := TGUID.Create(f_BinaryReader.ReadBytes(16));
-      end;
+      FFormatExtensible.Format.FormatTag := FBinaryReader.ReadWord;
+      FFormatExtensible.Format.Channels := FBinaryReader.ReadWord;
+      FFormatExtensible.Format.SamplesPerSec := FBinaryReader.ReadCardinal;
+      FFormatExtensible.Format.AvgBytesPerSec := FBinaryReader.ReadCardinal;
+      FFormatExtensible.Format.BlockAlign := FBinaryReader.ReadWord;
+      FFormatExtensible.Format.BitsPerSample := FBinaryReader.ReadWord;
     end;
 
-  except
-    on E: Exception do
+    // PCM
+    if FFormatExtensible.Format.FormatTag = WAVE_FORMAT_PCM then
     begin
+      // Without extension block
+      if LFmtSize = 16 then
+      begin
+        FFormatExtensible.Format.Size := 0;
 
+        // Read Data chunk
+        LDataIdent := FBinaryReader.ReadChars(4);
+
+        SetString(LDataIdentStr, PChar(LDataIdent), Length(LDataIdent));
+
+        if LDataIdentStr = 'data' then
+        begin
+          LDataSize := FBinaryReader.ReadCardinal;
+
+          if LDataSize > 0 then
+          begin
+            FAvailable := True;
+          end;
+        end;
+      end;
+    end
+    // Extensible
+    else if FFormatExtensible.Format.FormatTag = WAVE_FORMAT_EXTENSIBLE then
+    begin
+      // Read extension block
+      FFormatExtensible.Format.Size := FBinaryReader.ReadWord;
+      FFormatExtensible.ValidBitsPerSample := FBinaryReader.ReadWord;
+      FFormatExtensible.ChannelMask := FBinaryReader.ReadCardinal;
+      FFormatExtensible.SubFormat := TGUID.Create(FBinaryReader.ReadBytes(16));
     end;
   end;
 end;
 
 destructor TJalWaveReader.Destroy;
 begin
-  FreeAndNil(f_BinaryReader);
-  FreeAndNil(f_FileStream);
+  FreeAndNil(FBinaryReader);
+  FreeAndNil(FFileStream);
 
   inherited;
 end;
 
-function TJalWaveReader.ReadBuffer(const a_pDest: PByte; const a_Count: Cardinal): Cardinal;
+function TJalWaveReader.ReadBuffer(const Dest: PByte; const Count: Cardinal): Cardinal;
 var
-  l_Data: TBytes;
+  LData: TBytes;
 begin
   // Read Data
-  SetLength(l_Data, a_Count);
-  Result := f_BinaryReader.Read(l_Data, 0, Length(l_Data));
+  SetLength(LData, Count);
+  Result := FBinaryReader.Read(LData, 0, Length(LData));
 
-  Move(l_Data[0], a_pDest^, Result);
+  Move(LData[0], Dest^, Result);
 end;
 
 end.
+

@@ -37,7 +37,6 @@ object FormMain: TFormMain
       Align = alTop
       BevelOuter = bvNone
       TabOrder = 1
-      ExplicitTop = 36
       object txt_SamplingRate: TLabel
         Left = 0
         Top = 0
@@ -73,7 +72,6 @@ object FormMain: TFormMain
       Align = alTop
       BevelOuter = bvNone
       TabOrder = 2
-      ExplicitTop = 61
       object txt_Bits: TLabel
         Left = 0
         Top = 0
@@ -108,7 +106,6 @@ object FormMain: TFormMain
       Align = alTop
       BevelOuter = bvNone
       TabOrder = 3
-      ExplicitTop = 86
       object txt_Channel: TLabel
         Left = 0
         Top = 0
@@ -175,7 +172,6 @@ object FormMain: TFormMain
       Align = alTop
       BevelOuter = bvNone
       TabOrder = 4
-      ExplicitTop = 30
       object txt_ShareMode: TLabel
         Left = 0
         Top = 0

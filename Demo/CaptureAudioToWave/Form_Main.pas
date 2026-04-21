@@ -3,9 +3,9 @@ unit Form_Main;
 interface
 
 uses
-  System.SysUtils, System.Classes, Vcl.Forms, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Controls,
-
-  JalCaptureAudioThread, JalWaveWriter, Jal.Win.AudioClient, Jal.Win.MMDeviceAPI;
+  System.SysUtils, System.Classes, Vcl.Forms, Vcl.StdCtrls, Vcl.ExtCtrls,
+  Vcl.Controls, JalCaptureAudioThread, JalWaveWriter, Jal.Win.AudioClient,
+  Jal.Win.MMDeviceAPI;
 
 type
   TFormMain = class(TForm)
@@ -38,7 +38,7 @@ type
     f_WaveWriter: TJalWaveWriter;
 
     procedure OnIdleApplication(Sender: TObject; var Done: Boolean);
-    procedure OnDefaultDeviceChanged(const a_Flow: EDataFlow; const a_Role: ERole; const a_DeviceId: PWideChar);
+    procedure OnDefaultDeviceChanged(const a_Flow: TDataFlow; const a_Role: TRole; const a_DeviceId: PWideChar);
     procedure OnCaptureBuffer(const a_Sender: TThread; const a_pData: PByte; const a_Count: Integer);
     procedure OnTerminate(Sender: TObject);
   public
@@ -51,11 +51,9 @@ var
 implementation
 
 uses
-  Winapi.MMSystem,
   JalWaveHelper;
 
 {$R *.dfm}
-
 
 procedure TFormMain.FormCreate(Sender: TObject);
 begin
@@ -79,7 +77,7 @@ end;
 
 procedure TFormMain.btn_StartCaptureClick(Sender: TObject);
 var
-  l_Format: tWAVEFORMATEX;
+  l_Format: TWaveFormatEx;
 begin
   // Get Format
   l_Format :=
@@ -88,7 +86,7 @@ begin
   // Create Wave Writer
   f_WaveWriter := TJalWaveWriter.Create(
     ExtractFileDir(Application.ExeName) +
-    Format('\%dch%dhz%dbit.wav', [l_Format.nChannels, l_Format.nSamplesPerSec, l_Format.wBitsPerSample]), l_Format);
+    Format('\%dch%dhz%dbit.wav', [l_Format.Channels, l_Format.SamplesPerSec, l_Format.BitsPerSample]), l_Format);
 
   // Create Capture Thread  *Delay is 10ms for real-time capture.
   f_CaptureAudioThread :=
@@ -118,7 +116,7 @@ begin
   end;
 end;
 
-procedure TFormMain.OnDefaultDeviceChanged(const a_Flow: EDataFlow; const a_Role: ERole; const a_DeviceId: PWideChar);
+procedure TFormMain.OnDefaultDeviceChanged(const a_Flow: TDataFlow; const a_Role: TRole; const a_DeviceId: PWideChar);
 begin
   TThread.Queue(nil,
     procedure
@@ -150,3 +148,4 @@ begin
 end;
 
 end.
+

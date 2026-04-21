@@ -3,10 +3,10 @@ unit form_Main;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
-
-  JalRenderAudioThread, JalWaveReader, Jal.Win.AudioClient;
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
+  System.Classes, Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
+  Vcl.StdCtrls, Vcl.ExtCtrls, JalRenderAudioThread, JalWaveReader,
+  Jal.Win.AudioClient;
 
 type
   TFormMain = class(TForm)
@@ -31,8 +31,7 @@ type
     f_WaveReader: TJalWaveReader;
 
     procedure OnIdleApplication(Sender: TObject; var Done: Boolean);
-    procedure OnRenderBuffer(const a_Sender: TThread; const a_pData: PByte; const a_AvailableCount: Cardinal;
-      var a_Flags: DWORD);
+    procedure OnRenderBuffer(const a_Sender: TThread; const a_pData: PByte; const a_AvailableCount: Cardinal; var a_Flags: DWORD);
     procedure OnTerminate(Sender: TObject);
   public
     { Public êÈåæ }
@@ -47,7 +46,6 @@ uses
   System.Math;
 
 {$R *.dfm}
-
 
 procedure TFormMain.FormCreate(Sender: TObject);
 begin
@@ -80,32 +78,6 @@ begin
   end;
 end;
 
-procedure TFormMain.btn_StartPlayClick(Sender: TObject);
-begin
-  if FileExists(edt_DirWaveFile.Text) then
-  begin
-    // Create Wave Reader
-    f_WaveReader := TJalWaveReader.Create(edt_DirWaveFile.Text);
-
-    try
-      if f_WaveReader.Available then
-      begin
-        // Create Render Thread
-        f_RenderAudioThread :=
-          TJalRenderAudioThread.Create(TAudioShareMode(cmb_ShareMode.ItemIndex), f_WaveReader.FormatExtensible.Format);
-        f_RenderAudioThread.OnRenderBuffer := OnRenderBuffer;
-        f_RenderAudioThread.OnTerminate := OnTerminate;
-      end;
-
-    finally
-      if not f_WaveReader.Available then
-      begin
-        FreeAndNil(f_WaveReader);
-      end;
-    end;
-  end;
-end;
-
 procedure TFormMain.btn_EndPlayClick(Sender: TObject);
 begin
   if Assigned(f_RenderAudioThread) then
@@ -122,21 +94,46 @@ begin
   end;
 end;
 
-procedure TFormMain.OnRenderBuffer(const a_Sender: TThread; const a_pData: PByte; const a_AvailableCount: Cardinal;
-  var a_Flags: DWORD);
+procedure TFormMain.btn_StartPlayClick(Sender: TObject);
+begin
+  if FileExists(edt_DirWaveFile.Text) then
+  begin
+    // Create Wave Reader
+    f_WaveReader := TJalWaveReader.Create(edt_DirWaveFile.Text);
+
+    try
+      if f_WaveReader.Available then
+      begin
+        // Create Render Thread
+        f_RenderAudioThread :=
+          TJalRenderAudioThread.Create(TAudioShareMode.Shared, f_WaveReader.FormatExtensible);
+        f_RenderAudioThread.OnRenderBuffer := OnRenderBuffer;
+        f_RenderAudioThread.OnTerminate := OnTerminate;
+        f_RenderAudioThread.Start;
+      end;
+    finally
+      if not f_WaveReader.Available then
+      begin
+        FreeAndNil(f_WaveReader);
+      end;
+    end;
+  end;
+end;
+
+procedure TFormMain.OnRenderBuffer(const a_Sender: TThread; const a_pData: PByte; const a_AvailableCount: Cardinal; var a_Flags: DWORD);
 begin
   if not a_Sender.CheckTerminated then
   begin
     // Read buffer and set flags
-    if f_WaveReader.ReadBuffer(a_pData, a_AvailableCount) = 0 then
+    if f_WaveReader.ReadBuffer(a_pData, a_AvailableCount) <> 0 then
     begin
-      a_Flags := DWORD(Ord(AUDCLNT_BUFFERFLAGS_SILENT));
-
-      a_Sender.Terminate;
+      a_Flags := 0;
     end
     else
     begin
-      a_Flags := 0;
+      a_Flags := DWORD(Ord(TAudioClientBufferFlags.Silent));
+
+      a_Sender.Terminate;
     end;
   end;
 end;
@@ -151,8 +148,8 @@ begin
         begin
           btn_EndPlayClick(Self);
         end);
-    end
-    ).Start;
+    end).Start;
 end;
 
 end.
+

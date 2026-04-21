@@ -4,45 +4,41 @@ interface
 
 uses
   System.SysUtils, System.Classes, System.Win.ComObj, System.SyncObjs,
-  System.StrUtils, Winapi.Windows, Winapi.ActiveX, Winapi.MMSystem,
-  Vcl.Forms,
-
-  Jal.Win.MMDeviceAPI, Jal.Win.AudioClient, JalAudioDevice;
+  System.StrUtils, Winapi.Windows, Winapi.ActiveX, Jal.Win.MMDeviceAPI,
+  Jal.Win.AudioClient, JalAudioDevice;
 
 type
-  TAudioShareMode = (asmShared, asmExclusive);
+  TAudioShareMode = TAudioClientShareMode;
 
-  TOnRenderBuffer = procedure(const a_Sender: TThread; const a_pData: PByte; const a_AvailableCount: Cardinal;
-    var a_Flags: DWORD) of object;
+  TOnRenderBuffer = procedure(const a_Sender: TThread; const a_pData: PByte; const a_AvailableCount: Cardinal; var a_Flags: DWORD) of object;
 
   TJalRenderAudioThread = class(TThread)
   private
-    f_AudioShareMode: TAudioShareMode;
-    f_WaveFormat: tWAVEFORMATEX;
-    f_OnRenderBuffer: TOnRenderBuffer;
+    FAudioShareMode: TAudioShareMode;
+    FWaveFormat: TWaveFormatExtensible;
+    FOnRenderBuffer: TOnRenderBuffer;
 
-    f_AudioDevice: TJalAudioDevice;
-    f_AudioClient: IAudioClient;
-    f_AudioRenderClient: IAudioRenderClient;
-    f_BufferFrameCount: UInt32;
-    f_ThreadIntervalMs: Cardinal;
+    FAudioDevice: TJalAudioDevice;
+    FAudioClient: IAudioClient;
+    FAudioRenderClient: IAudioRenderClient;
+    FBufferFrameCount: UInt32;
+    FThreadIntervalMs: Cardinal;
 
     function StartRender: Boolean;
   public
-    constructor Create(const a_AudioShareMode: TAudioShareMode; const a_Format: tWAVEFORMATEX);
+    constructor Create(const AudioShareMode: TAudioShareMode; const Format: TWaveFormatExtensible);
     destructor Destroy; override;
 
-    property OnRenderBuffer: TOnRenderBuffer write f_OnRenderBuffer;
+    property OnRenderBuffer: TOnRenderBuffer write FOnRenderBuffer;
   protected
     procedure Execute; override;
   end;
 
 const
   // 1 REFTIMES = 100 nano sec
-  REFTIMES_PER_SEC: REFERENCE_TIME  = 10000000; // REFTIMES to Sec
-  REFTIMES_PER_MSEC: REFERENCE_TIME = 10000;    // REFTIMES to MSec
-
-  REFTIME_LOWLATENCY: REFERENCE_TIME = 50000; // 5ms
+  REFTIMES_PER_SEC: TReferenceTime = 10000000; // REFTIMES to Sec
+  REFTIMES_PER_MSEC: TReferenceTime = 10000;    // REFTIMES to MSec
+  REFTIME_LOWLATENCY: TReferenceTime = 50000; // 5ms
 
 implementation
 
@@ -51,77 +47,77 @@ uses
 
 { TRenderAudioThread }
 
-constructor TJalRenderAudioThread.Create(const a_AudioShareMode: TAudioShareMode; const a_Format: tWAVEFORMATEX);
+constructor TJalRenderAudioThread.Create(const AudioShareMode: TAudioShareMode; const Format: TWaveFormatExtensible);
 begin
-  f_AudioShareMode := a_AudioShareMode;
-  f_WaveFormat := a_Format;
-
+  FAudioShareMode := AudioShareMode;
+  FWaveFormat := Format;
   FreeOnTerminate := False;
-  inherited Create(False);
+  inherited Create(True);
+  Priority := TThreadPriority.tpTimeCritical;
 end;
 
 destructor TJalRenderAudioThread.Destroy;
 begin
-  if Assigned(f_AudioDevice) then
-    FreeAndNil(f_AudioDevice);
+  if Assigned(FAudioDevice) then
+    FreeAndNil(FAudioDevice);
 
   inherited;
 end;
 
 function TJalRenderAudioThread.StartRender: Boolean;
 var
-  l_pBuffer: PByte;
-  l_ShareMode: AUDCLNT_SHAREMODE;
-  l_StreamFlags: DWORD;
-  l_WaveFormatExtensible: WAVEFORMATEXTENSIBLE;
-  l_BufferDuration: REFERENCE_TIME;
-  l_Periodicity: REFERENCE_TIME;
+  LpBuffer: PByte;
+  LShareMode: TAudioClientShareMode;
+  LStreamFlags: DWORD;
+  LWaveFormatExtensible: TWaveFormatExtensible;
+  LBufferDuration: TReferenceTime;
+  LPeriodicity: TReferenceTime;
 begin
   Result := False;
 
   // Get Audio Client
-  if Succeeded(f_AudioDevice.Device.Activate(IID_IAudioClient, CLSCTX_ALL, nil, f_AudioClient)) then
+  if Succeeded(FAudioDevice.Device.Activate(IID_IAudioClient, CLSCTX_ALL, nil, FAudioClient)) then
   begin
     // Support exclusive mode.
-    if f_AudioShareMode = asmExclusive then
+    if FAudioShareMode = TAudioShareMode.Exclusive then
     begin
-      l_ShareMode := AUDCLNT_SHAREMODE_EXCLUSIVE;
-      l_StreamFlags := 0;
-      l_BufferDuration := REFTIME_LOWLATENCY;
-      l_Periodicity := REFTIME_LOWLATENCY;
+      LShareMode := TAudioClientShareMode.Exclusive;
+      LStreamFlags := 0;
+      LBufferDuration := REFTIME_LOWLATENCY;
+      LPeriodicity := REFTIME_LOWLATENCY;
     end
     else
     begin
-      l_ShareMode := AUDCLNT_SHAREMODE_SHARED;
-      l_StreamFlags := AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM or AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY;
-      l_BufferDuration := REFTIMES_PER_SEC; // Shared mode is impossible lowlatency.
-      l_Periodicity := 0;
+      LShareMode := TAudioClientShareMode.Shared;
+      LStreamFlags := AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM or AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY;
+      LBufferDuration := REFTIMES_PER_SEC; // Shared mode is impossible lowlatency.
+      LPeriodicity := 0;
     end;
 
     // Change to Extensible.
-    l_WaveFormatExtensible.Format := f_WaveFormat;
+    LWaveFormatExtensible := FWaveFormat;
 
     // Init AudioClient *AUTOCONVERTPCM makes the IsFormatSupported and GetMixFormat function unnecessary.
-    if Succeeded(f_AudioClient.Initialize(
-      l_ShareMode, l_StreamFlags, l_BufferDuration, l_Periodicity, @l_WaveFormatExtensible, nil)) then
+    if Succeeded(FAudioClient.Initialize(
+        LShareMode, LStreamFlags, LBufferDuration, LPeriodicity, @LWaveFormatExtensible, nil)) then
     begin
       // Get Audio Render Client
-      if Succeeded(f_AudioClient.GetService(IID_IAudioRenderClient, f_AudioRenderClient)) then
+      if Succeeded(FAudioClient.GetService(IID_IAudioRenderClient, FAudioRenderClient)) then
       begin
         // Get buffer size
-        if Succeeded(f_AudioClient.GetBufferSize(f_BufferFrameCount)) then
+        if Succeeded(FAudioClient.GetBufferSize(FBufferFrameCount)) then
         begin
           // Get optimal thread interval
-          f_ThreadIntervalMs :=
-            Ceil(l_BufferDuration * f_BufferFrameCount / f_WaveFormat.nSamplesPerSec / REFTIMES_PER_MSEC / 2);
+          FThreadIntervalMs :=
+            Ceil(LBufferDuration * FBufferFrameCount / FWaveFormat.Format.SamplesPerSec / REFTIMES_PER_MSEC / 2);
 
           // Destoroy initial buffer
-          if Succeeded(f_AudioRenderClient.GetBuffer(f_BufferFrameCount, l_pBuffer)) then
+          if Succeeded(FAudioRenderClient.GetBuffer(FBufferFrameCount, LpBuffer)) then
           begin
-            if Succeeded(f_AudioRenderClient.ReleaseBuffer(f_BufferFrameCount, 0)) then
+            if Succeeded(FAudioRenderClient.ReleaseBuffer(FBufferFrameCount, 0)) then
             begin
               // Start Render
-              Result := Succeeded(f_AudioClient.Start);
+              Result := Succeeded(FAudioClient.Start);
             end;
           end;
         end;
@@ -132,49 +128,50 @@ end;
 
 procedure TJalRenderAudioThread.Execute;
 var
-  l_NumFramesPadding: UInt32;
-  l_NumFramesAvailable: UInt32;
-  l_pBuffer: PByte;
-  l_Flags: DWORD;
+  LNumFramesPadding: UInt32;
+  LNumFramesAvailable: UInt32;
+  LpBuffer: PByte;
+  LFlags: DWORD;
 begin
   // Create Audio Device
-  f_AudioDevice := TJalAudioDevice.Create(COINIT_MULTITHREADED, eRender);
+  FAudioDevice := TJalAudioDevice.Create(COINIT_MULTITHREADED, TDataFlow.Render);
 
   // Check ready device and start render
-  if (f_AudioDevice.Ready) and (StartRender) then
+  if (FAudioDevice.Ready) and (StartRender) then
   begin
     while (not Terminated) do
     begin
       // Wait...
-      TThread.Sleep(f_ThreadIntervalMs);
+      TThread.Sleep(10); //FThreadIntervalMs
 
       // See how much buffer space is available
-      if Succeeded(f_AudioClient.GetCurrentPadding(@l_NumFramesPadding)) then
+      if Succeeded(FAudioClient.GetCurrentPadding(@LNumFramesPadding)) then
       begin
-        l_NumFramesAvailable := f_BufferFrameCount - l_NumFramesPadding;
+        LNumFramesAvailable := FBufferFrameCount - LNumFramesPadding;
 
         // Get buffer space
-        if Succeeded(f_AudioRenderClient.GetBuffer(l_NumFramesAvailable, l_pBuffer)) then
+        if Succeeded(FAudioRenderClient.GetBuffer(LNumFramesAvailable, LpBuffer)) then
         begin
           // Callback Render Buffer
           // *Frame x BlockAlign = bufer size
           // *Flags is AUDCLNT_BUFFERFLAGS_...
-          if Assigned(f_OnRenderBuffer) then
+          if Assigned(FOnRenderBuffer) then
           begin
-            f_OnRenderBuffer(Self, l_pBuffer, l_NumFramesAvailable * f_WaveFormat.nBlockAlign, l_Flags);
+            FOnRenderBuffer(Self, LpBuffer, LNumFramesAvailable * FWaveFormat.Format.BlockAlign, LFlags);
           end;
 
-          f_AudioRenderClient.ReleaseBuffer(l_NumFramesAvailable, l_Flags);
+          FAudioRenderClient.ReleaseBuffer(LNumFramesAvailable, LFlags);
         end;
       end;
     end;
 
     // Wait for finish playing
-    TThread.Sleep(f_ThreadIntervalMs);
+    TThread.Sleep(FThreadIntervalMs);
 
     // Stop Capture
-    f_AudioClient.Stop;
+    FAudioClient.Stop;
   end;
 end;
 
 end.
+

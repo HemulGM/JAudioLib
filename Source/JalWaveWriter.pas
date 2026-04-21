@@ -3,25 +3,23 @@ unit JalWaveWriter;
 interface
 
 uses
-  System.Classes, System.SysUtils, Winapi.MMSystem,
-
-  Jal.Win.AudioClient;
+  System.Classes, System.SysUtils, Winapi.MMSystem, Jal.Win.AudioClient;
 
 type
   TJalWaveWriter = class
   private
-    f_Format: tWAVEFORMATEX;
-    f_FileStream: TFileStream;
-    f_BinaryWriter: TBinaryWriter;
-    f_DataSizePosition: Int64;
-    f_DataSize: UInt32;
+    FFormat: TWaveFormatEx;
+    FFileStream: TFileStream;
+    FBinaryWriter: TBinaryWriter;
+    FDataSizePosition: Int64;
+    FDataSize: UInt32;
   public
-    constructor Create(const a_DirFileName: string; const a_Format: tWAVEFORMATEX);
+    constructor Create(const DirFileName: string; const Format: TWaveFormatEx);
     destructor Destroy; override;
 
-    property Format: tWAVEFORMATEX read f_Format;
+    property Format: TWaveFormatEx read FFormat;
 
-    procedure WriteBuffer(const a_pSource: PByte; const a_Count: Integer);
+    procedure WriteBuffer(const Source: PByte; const Count: Integer);
     procedure Close;
   end;
 
@@ -29,64 +27,65 @@ implementation
 
 { TWaveWriter }
 
-constructor TJalWaveWriter.Create(const a_DirFileName: string; const a_Format: tWAVEFORMATEX);
+constructor TJalWaveWriter.Create(const DirFileName: string; const Format: TWaveFormatEx);
 begin
-  f_Format := a_Format;
+  FFormat := Format;
 
   // Create Streams
-  f_FileStream := TFileStream.Create(a_DirFileName, fmCreate);
-  f_BinaryWriter := TBinaryWriter.Create(f_FileStream, TEncoding.ASCII);
+  FFileStream := TFileStream.Create(DirFileName, fmCreate);
+  FBinaryWriter := TBinaryWriter.Create(FFileStream, TEncoding.ASCII);
 
   // Write Headers
-  f_BinaryWriter.Write('RIFF'.ToCharArray);
-  f_BinaryWriter.Write(UInt32(0));
-  f_BinaryWriter.Write('WAVE'.ToCharArray);
-  f_BinaryWriter.Write('fmt '.ToCharArray);
-  f_BinaryWriter.Write(UInt32(16 + a_Format.cbSize));
-  f_BinaryWriter.Write(a_Format.wFormatTag);
-  f_BinaryWriter.Write(a_Format.nChannels);
-  f_BinaryWriter.Write(a_Format.nSamplesPerSec);
-  f_BinaryWriter.Write(a_Format.nAvgBytesPerSec);
-  f_BinaryWriter.Write(a_Format.nBlockAlign);
-  f_BinaryWriter.Write(a_Format.wBitsPerSample);
-  f_BinaryWriter.Write('data'.ToCharArray);
-  f_DataSizePosition := f_FileStream.Position; // Store Position
-  f_BinaryWriter.Write(UInt32(0));             // Reserve DataSize area
+  FBinaryWriter.Write('RIFF'.ToCharArray);
+  FBinaryWriter.Write(UInt32(0));
+  FBinaryWriter.Write('WAVE'.ToCharArray);
+  FBinaryWriter.Write('fmt '.ToCharArray);
+  FBinaryWriter.Write(UInt32(16 + Format.Size));
+  FBinaryWriter.Write(Format.FormatTag);
+  FBinaryWriter.Write(Format.Channels);
+  FBinaryWriter.Write(Format.SamplesPerSec);
+  FBinaryWriter.Write(Format.AvgBytesPerSec);
+  FBinaryWriter.Write(Format.BlockAlign);
+  FBinaryWriter.Write(Format.BitsPerSample);
+  FBinaryWriter.Write('data'.ToCharArray);
+  FDataSizePosition := FFileStream.Position; // Store Position
+  FBinaryWriter.Write(UInt32(0));             // Reserve DataSize area
 
-  f_DataSize := 0;
+  FDataSize := 0;
 end;
 
 destructor TJalWaveWriter.Destroy;
 begin
-  FreeAndNil(f_BinaryWriter);
-  FreeAndNil(f_FileStream);
+  FreeAndNil(FBinaryWriter);
+  FreeAndNil(FFileStream);
 
   inherited;
 end;
 
-procedure TJalWaveWriter.WriteBuffer(const a_pSource: PByte; const a_Count: Integer);
+procedure TJalWaveWriter.WriteBuffer(const Source: PByte; const Count: Integer);
 var
-  l_Bytes: TBytes;
+  LBytes: TBytes;
 begin
-  SetLength(l_Bytes, a_Count);
-  Move(a_pSource^, l_Bytes[0], Length(l_Bytes));
+  SetLength(LBytes, Count);
+  Move(Source^, LBytes[0], Length(LBytes));
 
   // Write to WAVE
-  f_BinaryWriter.Write(l_Bytes, 0, a_Count);
+  FBinaryWriter.Write(LBytes, 0, Count);
 
   // Store data size
-  Inc(f_DataSize, a_Count);
+  Inc(FDataSize, Count);
 end;
 
 procedure TJalWaveWriter.Close;
 begin
   // Write Chunk
-  f_BinaryWriter.Seek(4, TSeekOrigin.soBeginning);
-  f_BinaryWriter.Write(UInt32(f_BinaryWriter.BaseStream.Size - 8));
+  FBinaryWriter.Seek(4, TSeekOrigin.soBeginning);
+  FBinaryWriter.Write(UInt32(FBinaryWriter.BaseStream.Size - 8));
 
   // Write Data Size
-  f_BinaryWriter.Seek(f_DataSizePosition, TSeekOrigin.soBeginning);
-  f_BinaryWriter.Write(f_DataSize);
+  FBinaryWriter.Seek(FDataSizePosition, TSeekOrigin.soBeginning);
+  FBinaryWriter.Write(FDataSize);
 end;
 
 end.
+

@@ -3,43 +3,38 @@ unit JalNotificationClient;
 interface
 
 uses
-  System.SysUtils, Winapi.Windows, Winapi.ActiveX,
-
-  Jal.Win.MMDeviceAPI;
+  System.SysUtils, Winapi.Windows, Winapi.ActiveX, Jal.Win.MMDeviceAPI;
 
 type
-  TOnDefaultDeviceChanged = procedure(const a_Flow: EDataFlow; const a_Role: ERole; const a_DeviceId: PWideChar)
-    of object;
+  TOnDefaultDeviceChanged = procedure(const Flow: TDataFlow; const Role: TRole; const DeviceId: PWideChar) of object;
 
   TJalNotificationClient = class(TInterfacedObject, IMMNotificationClient)
   private
-    f_DeviceId: string;
-    f_Flow: EDataFlow;
-    f_Role: ERole;
-    f_OnDefaultDeviceChanged: TOnDefaultDeviceChanged;
+    FDeviceId: string;
+    FFlow: TDataFlow;
+    FRole: TRole;
+    FOnDefaultDeviceChanged: TOnDefaultDeviceChanged;
   public
-    constructor Create(const a_DeviceId: string; const a_Flow: EDataFlow; const a_Role: ERole;
-      const a_OnDefaultDeviceChanged: TOnDefaultDeviceChanged);
+    constructor Create(const DeviceId: string; const Flow: TDataFlow; const Role: TRole; const OnDefaultDeviceChanged: TOnDefaultDeviceChanged);
     destructor Destroy; override;
 
-    function OnDefaultDeviceChanged(flow: EDataFlow; role: ERole; pwstrDefaultDeviceId: PWideChar): HResult; stdcall;
-    function OnDeviceAdded(pwstrDeviceId: PWideChar): HResult; stdcall;
-    function OnDeviceRemoved(pwstrDeviceId: PWideChar): HResult; stdcall;
-    function OnDeviceStateChanged(pwstrDeviceId: PWideChar; dwNewState: DWORD): HResult; stdcall;
-    function OnPropertyValueChanged(pwstrDeviceId: PWideChar; key: PROPERTYKEY): HResult; stdcall;
+    function OnDefaultDeviceChanged(Flow: TDataFlow; Role: TRole; DefaultDeviceId: PWideChar): HResult; stdcall;
+    function OnDeviceAdded(DeviceId: PWideChar): HResult; stdcall;
+    function OnDeviceRemoved(DeviceId: PWideChar): HResult; stdcall;
+    function OnDeviceStateChanged(DeviceId: PWideChar; NewState: DWORD): HResult; stdcall;
+    function OnPropertyValueChanged(DeviceId: PWideChar; key: PROPERTYKEY): HResult; stdcall;
   end;
 
 implementation
 
 { TNotificationClient }
 
-constructor TJalNotificationClient.Create(const a_DeviceId: string; const a_Flow: EDataFlow; const a_Role: ERole;
-  const a_OnDefaultDeviceChanged: TOnDefaultDeviceChanged);
+constructor TJalNotificationClient.Create(const DeviceId: string; const Flow: TDataFlow; const Role: TRole; const OnDefaultDeviceChanged: TOnDefaultDeviceChanged);
 begin
-  f_DeviceId := a_DeviceId;
-  f_Flow := a_Flow;
-  f_Role := a_Role;
-  f_OnDefaultDeviceChanged := a_OnDefaultDeviceChanged;
+  FDeviceId := DeviceId;
+  FFlow := Flow;
+  FRole := Role;
+  FOnDefaultDeviceChanged := OnDefaultDeviceChanged;
 end;
 
 destructor TJalNotificationClient.Destroy;
@@ -47,36 +42,35 @@ begin
   inherited;
 end;
 
-function TJalNotificationClient.OnDefaultDeviceChanged(flow: EDataFlow; role: ERole;
-  pwstrDefaultDeviceId: PWideChar): HResult;
+function TJalNotificationClient.OnDefaultDeviceChanged(Flow: TDataFlow; Role: TRole; DefaultDeviceId: PWideChar): HResult;
 begin
-  if (Assigned(f_OnDefaultDeviceChanged))  and (flow = f_Flow) and (role = f_Role)
-  then
+  if (Assigned(FOnDefaultDeviceChanged)) and (Flow = FFlow) and (Role = FRole) then
   begin
-    f_OnDefaultDeviceChanged(flow, role, pwstrDefaultDeviceId); // Callback
+    FOnDefaultDeviceChanged(Flow, Role, DefaultDeviceId); // Callback
   end;
 
   Result := S_OK;
 end;
 
-function TJalNotificationClient.OnDeviceAdded(pwstrDeviceId: PWideChar): HResult;
+function TJalNotificationClient.OnDeviceAdded(DeviceId: PWideChar): HResult;
 begin
   Result := S_OK;
 end;
 
-function TJalNotificationClient.OnDeviceRemoved(pwstrDeviceId: PWideChar): HResult;
+function TJalNotificationClient.OnDeviceRemoved(DeviceId: PWideChar): HResult;
 begin
   Result := S_OK;
 end;
 
-function TJalNotificationClient.OnDeviceStateChanged(pwstrDeviceId: PWideChar; dwNewState: DWORD): HResult;
+function TJalNotificationClient.OnDeviceStateChanged(DeviceId: PWideChar; NewState: DWORD): HResult;
 begin
   Result := S_OK;
 end;
 
-function TJalNotificationClient.OnPropertyValueChanged(pwstrDeviceId: PWideChar; key: PROPERTYKEY): HResult;
+function TJalNotificationClient.OnPropertyValueChanged(DeviceId: PWideChar; Key: PROPERTYKEY): HResult;
 begin
   Result := S_OK;
 end;
 
 end.
+
