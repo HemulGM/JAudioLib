@@ -20,7 +20,7 @@ Primarily use Windows WASAPI.
 * Capture audio(mic/system) buffer.
 * Capture audio(mic/system), and save to Wave(Format customizable).
 * Render(Play) audio from Wave.
-* Capture audio(mic/system), and streaming to server over network with FFmpeg.
+* Capture audio(mic/system).
 
 ## Summary
 
